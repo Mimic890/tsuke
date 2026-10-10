@@ -80,6 +80,9 @@ func open(dsn string) (*Store, error) {
 	return &Store{db: db, now: time.Now}, nil
 }
 
+// SetClock replaces the time source (tests).
+func (s *Store) SetClock(now func() time.Time) { s.now = now }
+
 // Close closes the database.
 func (s *Store) Close() error { return s.db.Close() }
 
