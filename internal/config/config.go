@@ -90,6 +90,10 @@ func LoadFrom(get func(string) string) (*Config, error) {
 		}
 	}
 	c.CacheRefresh = time.Duration(hours * float64(time.Hour))
+
+	if c.WebhookURL != "" && c.WebhookSecret == "" {
+		return nil, errors.New("WEBHOOK_SECRET is required when WEBHOOK_URL is set")
+	}
 	return c, nil
 }
 

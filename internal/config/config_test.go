@@ -43,6 +43,7 @@ func TestLoadOverrides(t *testing.T) {
 	m["FIREFLY_PUBLIC_URL"] = "https://public.example.com/"
 	m["CACHE_REFRESH_HOURS"] = "0.5"
 	m["WEBHOOK_URL"] = "https://bot.example.com/"
+	m["WEBHOOK_SECRET"] = "s3cret"
 	c, err := LoadFrom(env(m))
 	if err != nil {
 		t.Fatal(err)
@@ -56,13 +57,14 @@ func TestLoadOverrides(t *testing.T) {
 
 func TestLoadErrors(t *testing.T) {
 	tests := map[string]func(map[string]string){
-		"missing token": func(m map[string]string) { delete(m, "TELEGRAM_BOT_TOKEN") },
-		"missing url":   func(m map[string]string) { delete(m, "FIREFLY_URL") },
-		"no users":      func(m map[string]string) { m["ALLOWED_USER_IDS"] = "" },
-		"bad user":      func(m map[string]string) { m["ALLOWED_USER_IDS"] = "1,abc" },
-		"bad tz":        func(m map[string]string) { m["TZ"] = "Mars/Base" },
-		"bad level":     func(m map[string]string) { m["LOG_LEVEL"] = "loud" },
-		"bad refresh":   func(m map[string]string) { m["CACHE_REFRESH_HOURS"] = "-1" },
+		"missing token":          func(m map[string]string) { delete(m, "TELEGRAM_BOT_TOKEN") },
+		"missing url":            func(m map[string]string) { delete(m, "FIREFLY_URL") },
+		"no users":               func(m map[string]string) { m["ALLOWED_USER_IDS"] = "" },
+		"bad user":               func(m map[string]string) { m["ALLOWED_USER_IDS"] = "1,abc" },
+		"bad tz":                 func(m map[string]string) { m["TZ"] = "Mars/Base" },
+		"bad level":              func(m map[string]string) { m["LOG_LEVEL"] = "loud" },
+		"bad refresh":            func(m map[string]string) { m["CACHE_REFRESH_HOURS"] = "-1" },
+		"webhook without secret": func(m map[string]string) { m["WEBHOOK_URL"] = "https://bot.example.com" },
 	}
 	for name, mutate := range tests {
 		t.Run(name, func(t *testing.T) {

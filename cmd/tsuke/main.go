@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+	_ "time/tzdata" // time zones work in minimal images
 
 	"github.com/Mimic890/tsuke/internal/bot"
 	"github.com/Mimic890/tsuke/internal/config"

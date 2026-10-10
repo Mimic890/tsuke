@@ -1,0 +1,18 @@
+services:
+  tsuke:
+    build: .
+    image: tsuke:latest
+    container_name: tsuke
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      # Path inside the container; the host side is the bind mount below.
+      DATA_DIR: /data
+    # The image runs as uid/gid 65532, so ./data must be writable by it
+    # (see README). Override here if you prefer your own user.
+    #user: "1000:1000"
+    volumes:
+      - ./data:/data
+    # Only needed in webhook mode (WEBHOOK_URL set):
+    #ports:
+    #  - "127.0.0.1:8080:8080"
