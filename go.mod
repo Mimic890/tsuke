@@ -3,6 +3,7 @@ module github.com/Mimic890/tsuke
 go 1.26.0
 
 require (
+	github.com/go-telegram/bot v1.27.0
 	github.com/makiuchi-d/gozxing v0.1.1
 	golang.org/x/image v0.47.0
 	modernc.org/sqlite v1.60.1

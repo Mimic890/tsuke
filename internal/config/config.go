@@ -13,20 +13,20 @@ import (
 
 // Config is the runtime configuration of tsuke.
 type Config struct {
-	TelegramToken   string
-	FireflyURL      string
-	FireflyPublic   string // base URL used for links in messages
-	FireflyToken    string
-	AllowedUserIDs  map[int64]struct{}
-	Location        *time.Location
-	DefaultSource   string
-	DataDir         string
-	LogLevel        slog.Level
-	CacheRefresh    time.Duration
-	WebhookURL      string // empty => long polling
-	WebhookSecret   string
-	WebhookListen   string
-	WebhookPath     string
+	TelegramToken  string
+	FireflyURL     string
+	FireflyPublic  string // base URL used for links in messages
+	FireflyToken   string
+	AllowedUserIDs map[int64]struct{}
+	Location       *time.Location
+	DefaultSource  string
+	DataDir        string
+	LogLevel       slog.Level
+	CacheRefresh   time.Duration
+	WebhookURL     string // empty => long polling
+	WebhookSecret  string
+	WebhookListen  string
+	WebhookPath    string
 }
 
 // Load reads and validates the configuration from environment variables.

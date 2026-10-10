@@ -3,6 +3,7 @@ package firefly
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"log/slog"
 	"net/http"
@@ -146,8 +147,8 @@ func TestValidationError(t *testing.T) {
 		_, _ = w.Write([]byte(`{"message":"The given data was invalid.","errors":{"transactions.0.source_id":["Source account is invalid."],"transactions.0.amount":["The amount field must be greater than 0."]}}`))
 	}))
 	_, err := c.CreateTransaction(context.Background(), sampleTx())
-	ae, ok := err.(*APIError)
-	if !ok {
+	var ae *APIError
+	if !errors.As(err, &ae) {
 		t.Fatalf("err = %T %v", err, err)
 	}
 	want := "The amount field must be greater than 0.\nSource account is invalid."

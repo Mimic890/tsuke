@@ -118,8 +118,12 @@ func FormatAPI(cents int64) string {
 
 // FormatHuman renders cents for people: "1 500", "1 500,50".
 func FormatHuman(cents int64) string {
-	whole := strconv.FormatInt(cents/100, 10)
 	var b strings.Builder
+	if cents < 0 {
+		b.WriteString("-")
+		cents = -cents
+	}
+	whole := strconv.FormatInt(cents/100, 10)
 	for i, r := range whole {
 		if i > 0 && (len(whole)-i)%3 == 0 {
 			b.WriteString(" ")
@@ -132,14 +136,14 @@ func FormatHuman(cents int64) string {
 	return b.String()
 }
 
-// APIToCents converts a decimal string from the API ("350.000000") to cents.
+// APIToCents converts a decimal string from the API ("350.000000") to signed cents.
 func APIToCents(s string) int64 {
 	f, err := strconv.ParseFloat(strings.TrimSpace(s), 64)
 	if err != nil {
 		return 0
 	}
 	if f < 0 {
-		f = -f
+		return -int64(-f*100 + 0.5)
 	}
 	return int64(f*100 + 0.5)
 }

@@ -2,6 +2,7 @@ package receipt
 
 import (
 	"bytes"
+	"errors"
 	"image"
 	"image/png"
 	"testing"
@@ -107,13 +108,13 @@ func TestDecodeQR(t *testing.T) {
 			t.Fatalf("size %d: got %q, %v", size, got, err)
 		}
 	}
-	if _, err := DecodeQR([]byte("not an image")); err != ErrNoQR {
+	if _, err := DecodeQR([]byte("not an image")); !errors.Is(err, ErrNoQR) {
 		t.Errorf("garbage: %v", err)
 	}
 	blank := image.NewGray(image.Rect(0, 0, 200, 200))
 	var buf bytes.Buffer
 	_ = png.Encode(&buf, blank)
-	if _, err := DecodeQR(buf.Bytes()); err != ErrNoQR {
+	if _, err := DecodeQR(buf.Bytes()); !errors.Is(err, ErrNoQR) {
 		t.Errorf("blank: %v", err)
 	}
 }

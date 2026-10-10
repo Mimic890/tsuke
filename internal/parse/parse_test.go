@@ -69,6 +69,12 @@ func TestFormat(t *testing.T) {
 	if got := APIToCents("350.000000000000"); got != 35000 {
 		t.Errorf("APIToCents = %d", got)
 	}
+	if got := APIToCents("-12.505"); got != -1251 {
+		t.Errorf("APIToCents negative = %d", got)
+	}
+	if got := FormatHuman(-123456); got != "-1\u00a0234,56" {
+		t.Errorf("FormatHuman negative = %q", got)
+	}
 }
 
 func TestParseWhen(t *testing.T) {
@@ -174,7 +180,7 @@ func TestRank(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.q, func(t *testing.T) {
 			got := Rank(tt.q, names)
-			if !reflect.DeepEqual(got, tt.want) && !(len(got) == 0 && len(tt.want) == 0) {
+			if !reflect.DeepEqual(got, tt.want) && (len(got) != 0 || len(tt.want) != 0) {
 				t.Fatalf("got %v, want %v", got, tt.want)
 			}
 		})
@@ -184,5 +190,17 @@ func TestRank(t *testing.T) {
 	}
 	if Normalize("Ёлка-Палка 2") != "елкапалка2" {
 		t.Errorf("Normalize = %q", Normalize("Ёлка-Палка 2"))
+	}
+}
+
+func TestParseWhenBase(t *testing.T) {
+	base := time.Date(2026, 9, 1, 8, 5, 0, 0, msk)
+	got, ok := ParseWhenBase("14:30", now, base)
+	if !ok || !got.Equal(time.Date(2026, 9, 1, 14, 30, 0, 0, msk)) {
+		t.Errorf("time only: %v %v", got, ok)
+	}
+	got, ok = ParseWhenBase("вчера", now, base)
+	if !ok || !got.Equal(time.Date(2026, 10, 9, 8, 5, 0, 0, msk)) {
+		t.Errorf("date only: %v %v", got, ok)
 	}
 }

@@ -109,17 +109,25 @@ func TestCreated(t *testing.T) {
 	if err != nil || last.GroupID != "2" || last.Summary != "s2" {
 		t.Fatalf("last = %+v, %v", last, err)
 	}
-	by, err := s.CreatedByMessage(ctx, 7, 100)
-	if err != nil || by.GroupID != "1" {
-		t.Fatalf("by msg = %+v, %v", by, err)
+	g, err := s.GroupByCard(ctx, 7, 100)
+	if err != nil || g != "1" {
+		t.Fatalf("by card = %q, %v", g, err)
 	}
-	// Updating the card message of an existing group keeps its timestamp.
+	// A group can be shown on several messages; the original card keeps working.
 	if err := s.PutCreated(ctx, Created{GroupID: "1", UserID: 7, ChatID: 7, MessageID: 555, Summary: "new"}); err != nil {
 		t.Fatal(err)
 	}
-	by, _ = s.CreatedByMessage(ctx, 7, 555)
-	if by.GroupID != "1" || !by.At.Equal(t0) {
-		t.Fatalf("after update = %+v", by)
+	if err := s.PutCard(ctx, 7, 600, "1"); err != nil {
+		t.Fatal(err)
+	}
+	for _, m := range []int{100, 555, 600} {
+		if g, err := s.GroupByCard(ctx, 7, m); err != nil || g != "1" {
+			t.Fatalf("card %d = %q, %v", m, g, err)
+		}
+	}
+	got, _ := s.LastCreated(ctx, 7)
+	if got.GroupID != "2" {
+		t.Fatalf("update must keep the original timestamp, last = %+v", got)
 	}
 	if err := s.DeleteCreated(ctx, "2"); err != nil {
 		t.Fatal(err)
@@ -127,6 +135,12 @@ func TestCreated(t *testing.T) {
 	last, _ = s.LastCreated(ctx, 7)
 	if last.GroupID != "1" {
 		t.Fatalf("last after delete = %+v", last)
+	}
+	if err := s.DeleteCreated(ctx, "1"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.GroupByCard(ctx, 7, 555); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("cards must go with the transaction: %v", err)
 	}
 	if _, err := s.LastCreated(ctx, 99); !errors.Is(err, ErrNotFound) {
 		t.Fatal(err)

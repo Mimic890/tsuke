@@ -101,6 +101,13 @@ func compose(now time.Time, d *civil, c *clock) time.Time {
 // ParseWhen parses a whole string consisting only of date and time tokens
 // ("вчера 9:15", "12.10 14:30", "14:30"). Missing parts default to now.
 func ParseWhen(s string, now time.Time) (time.Time, bool) {
+	return ParseWhenBase(s, now, now)
+}
+
+// ParseWhenBase is like ParseWhen, but a missing date or time is taken from
+// base (the value being edited) instead of now. Relative words such as
+// "вчера" are still relative to now.
+func ParseWhenBase(s string, now, base time.Time) (time.Time, bool) {
 	toks := strings.Fields(s)
 	if len(toks) == 0 || len(toks) > 2 {
 		return time.Time{}, false
@@ -115,6 +122,13 @@ func ParseWhen(s string, now time.Time) (time.Time, bool) {
 		} else {
 			return time.Time{}, false
 		}
+	}
+	if d == nil {
+		bd := civilOf(base)
+		d = &bd
+	}
+	if c == nil {
+		c = &clock{base.Hour(), base.Minute()}
 	}
 	return compose(now, d, c), true
 }

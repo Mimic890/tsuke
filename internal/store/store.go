@@ -49,7 +49,12 @@ CREATE TABLE IF NOT EXISTS created (
 	summary    TEXT NOT NULL DEFAULT '',
 	created_at INTEGER NOT NULL
 );
-CREATE INDEX IF NOT EXISTS created_msg ON created(chat_id, message_id);
+CREATE TABLE IF NOT EXISTS cards (
+	chat_id    INTEGER NOT NULL,
+	message_id INTEGER NOT NULL,
+	group_id   TEXT NOT NULL,
+	PRIMARY KEY (chat_id, message_id)
+);
 `
 
 // Open opens (creating if needed) the database in dir.
@@ -83,10 +88,11 @@ var ErrNotFound = errors.New("store: not found")
 
 // Draft is a persisted draft payload.
 type Draft struct {
-	ID       string
-	UserID   int64
-	Awaiting string
-	Data     []byte
+	ID        string
+	UserID    int64
+	Awaiting  string
+	Data      []byte
+	UpdatedAt time.Time
 }
 
 // PutDraft inserts or replaces a draft.
@@ -101,23 +107,41 @@ func (s *Store) PutDraft(ctx context.Context, d Draft) error {
 // Draft loads a draft by id.
 func (s *Store) Draft(ctx context.Context, id string) (Draft, error) {
 	d := Draft{ID: id}
-	err := s.db.QueryRowContext(ctx, `SELECT user_id,awaiting,data FROM drafts WHERE id=?`, id).
-		Scan(&d.UserID, &d.Awaiting, &d.Data)
+	var ts int64
+	err := s.db.QueryRowContext(ctx, `SELECT user_id,awaiting,data,updated_at FROM drafts WHERE id=?`, id).
+		Scan(&d.UserID, &d.Awaiting, &d.Data, &ts)
 	if errors.Is(err, sql.ErrNoRows) {
 		return d, ErrNotFound
 	}
+	d.UpdatedAt = time.Unix(ts, 0)
 	return d, err
 }
 
 // AwaitingDraft returns the user's most recently updated draft that waits for text input.
 func (s *Store) AwaitingDraft(ctx context.Context, userID int64) (Draft, error) {
 	d := Draft{UserID: userID}
+	var ts int64
 	err := s.db.QueryRowContext(ctx,
-		`SELECT id,awaiting,data FROM drafts WHERE user_id=? AND awaiting<>'' ORDER BY updated_at DESC, rowid DESC LIMIT 1`, userID).
-		Scan(&d.ID, &d.Awaiting, &d.Data)
+		`SELECT id,awaiting,data,updated_at FROM drafts WHERE user_id=? AND awaiting<>'' ORDER BY updated_at DESC, rowid DESC LIMIT 1`, userID).
+		Scan(&d.ID, &d.Awaiting, &d.Data, &ts)
 	if errors.Is(err, sql.ErrNoRows) {
 		return d, ErrNotFound
 	}
+	d.UpdatedAt = time.Unix(ts, 0)
+	return d, err
+}
+
+// LatestDraft returns the user's most recently updated draft.
+func (s *Store) LatestDraft(ctx context.Context, userID int64) (Draft, error) {
+	d := Draft{UserID: userID}
+	var ts int64
+	err := s.db.QueryRowContext(ctx,
+		`SELECT id,awaiting,data,updated_at FROM drafts WHERE user_id=? ORDER BY updated_at DESC, rowid DESC LIMIT 1`, userID).
+		Scan(&d.ID, &d.Awaiting, &d.Data, &ts)
+	if errors.Is(err, sql.ErrNoRows) {
+		return d, ErrNotFound
+	}
+	d.UpdatedAt = time.Unix(ts, 0)
 	return d, err
 }
 
@@ -223,19 +247,34 @@ func (s *Store) PutCreated(ctx context.Context, c Created) error {
 		`INSERT INTO created(group_id,user_id,chat_id,message_id,summary,created_at) VALUES(?,?,?,?,?,?)
 		 ON CONFLICT(group_id) DO UPDATE SET chat_id=excluded.chat_id, message_id=excluded.message_id, summary=excluded.summary`,
 		c.GroupID, c.UserID, c.ChatID, c.MessageID, c.Summary, at.Unix())
+	if err != nil || c.MessageID == 0 {
+		return err
+	}
+	return s.PutCard(ctx, c.ChatID, c.MessageID, c.GroupID)
+}
+
+// PutCard remembers that a bot message shows a transaction.
+func (s *Store) PutCard(ctx context.Context, chatID int64, msgID int, groupID string) error {
+	_, err := s.db.ExecContext(ctx,
+		`INSERT INTO cards(chat_id,message_id,group_id) VALUES(?,?,?)
+		 ON CONFLICT(chat_id,message_id) DO UPDATE SET group_id=excluded.group_id`, chatID, msgID, groupID)
 	return err
+}
+
+// GroupByCard returns the transaction group shown on a bot message.
+func (s *Store) GroupByCard(ctx context.Context, chatID int64, msgID int) (string, error) {
+	var g string
+	err := s.db.QueryRowContext(ctx, `SELECT group_id FROM cards WHERE chat_id=? AND message_id=?`, chatID, msgID).Scan(&g)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", ErrNotFound
+	}
+	return g, err
 }
 
 // LastCreated returns the newest created transaction of a user.
 func (s *Store) LastCreated(ctx context.Context, userID int64) (Created, error) {
 	return s.scanCreated(s.db.QueryRowContext(ctx,
 		`SELECT group_id,user_id,chat_id,message_id,summary,created_at FROM created WHERE user_id=? ORDER BY created_at DESC, rowid DESC LIMIT 1`, userID))
-}
-
-// CreatedByMessage finds the transaction shown on a bot message.
-func (s *Store) CreatedByMessage(ctx context.Context, chatID int64, msgID int) (Created, error) {
-	return s.scanCreated(s.db.QueryRowContext(ctx,
-		`SELECT group_id,user_id,chat_id,message_id,summary,created_at FROM created WHERE chat_id=? AND message_id=?`, chatID, msgID))
 }
 
 func (s *Store) scanCreated(row *sql.Row) (Created, error) {
@@ -251,6 +290,9 @@ func (s *Store) scanCreated(row *sql.Row) (Created, error) {
 
 // DeleteCreated forgets a created transaction.
 func (s *Store) DeleteCreated(ctx context.Context, groupID string) error {
+	if _, err := s.db.ExecContext(ctx, `DELETE FROM cards WHERE group_id=?`, groupID); err != nil {
+		return err
+	}
 	_, err := s.db.ExecContext(ctx, `DELETE FROM created WHERE group_id=?`, groupID)
 	return err
 }
