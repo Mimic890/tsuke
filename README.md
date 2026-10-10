@@ -155,7 +155,7 @@ internal/i18n      user-facing strings
 internal/logx      slog setup with secret masking
 ```
 
-Libraries: [`go-telegram/bot`](https://github.com/go-telegram/bot) (maintained, dependency-free, tracks the current Bot API, simple handler model), [`gozxing`](https://github.com/makiuchi-d/gozxing) for QR decoding and [`modernc.org/sqlite`](https://pkg.go.dev/modernc.org/sqlite) for storage, so the whole thing builds with `CGO_ENABLED=0` for amd64 and arm64.
+Libraries: [`go-telegram/bot`](https://github.com/go-telegram/bot) (actively maintained, tracks the current Bot API, small API surface, supports webhooks), [`gozxing`](https://github.com/makiuchi-d/gozxing) for QR decoding and [`modernc.org/sqlite`](https://pkg.go.dev/modernc.org/sqlite) for storage, so the whole thing builds with `CGO_ENABLED=0` for amd64 and arm64.
 
 CI (GitHub Actions) runs lint, tests and a multi-arch Docker build on every pull request.
 
