@@ -64,6 +64,30 @@ docker compose up -d --build
 docker compose logs -f
 ```
 
+#### Prebuilt image
+
+CI publishes a multi-arch image (amd64, arm64) to GitHub Container Registry after lint and tests pass on `main` (`latest`, `sha-<short>`) and on `v*` tags (`1.2.3`, `1.2`). To run it without building, use this `docker-compose.yml` next to your `.env`:
+
+```yaml
+services:
+  tsuke:
+    image: ghcr.io/mimic890/tsuke:latest
+    container_name: tsuke
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATA_DIR: /data
+    volumes:
+      - ./data:/data
+```
+
+```fish
+docker compose pull
+docker compose up -d
+```
+
+If the package is private, run `docker login ghcr.io` with a personal access token that has `read:packages`, or make the package public in the repository's package settings.
+
 Back up by copying `./data` (it holds `tsuke.db` and drafts in progress).
 
 ### Long polling vs webhook
